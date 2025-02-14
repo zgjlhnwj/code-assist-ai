@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import axios from 'axios';
+import * as fs from 'fs';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
@@ -26,6 +28,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'sendMessage':
                     this._handleMessage(data.text, data.image);
                     break;
+                case 'generateCode':
+                    await this._handleGenerateCode(data.image);
+                    break;
             }
         });
     }
@@ -48,234 +53,79 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }, 1000);
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview) {
-        return `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body {
-                        margin: 0;
-                        padding: 10px;
-                        background: var(--vscode-editor-background);
-                        color: var(--vscode-editor-foreground);
-                        font-family: var(--vscode-font-family);
-                    }
-                    .chat-container {
-                        display: flex;
-                        flex-direction: column;
-                        height: 100vh;
-                    }
-                    .messages {
-                        flex: 1;
-                        overflow-y: auto;
-                        margin-bottom: 10px;
-                    }
-                    .message {
-                        margin: 8px 0;
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        max-width: 100%;
-                        word-wrap: break-word;
-                    }
-                    .user-message {
-                        background: var(--vscode-button-background);
-                        color: var(--vscode-button-foreground);
-                        margin-left: auto;
-                    }
-                    .ai-message {
-                        background: var(--vscode-editor-inactiveSelectionBackground);
-                        margin-right: auto;
-                    }
-                    .message img {
-                        max-width: 100%;
-                        border-radius: 4px;
-                        margin: 5px 0;
-                    }
-                    .input-container {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 8px;
-                        padding: 10px;
-                        background: var(--vscode-editor-background);
-                        border-top: 1px solid var(--vscode-widget-border);
-                    }
-                    .input-area {
-                        display: flex;
-                        gap: 8px;
-                    }
-                    #messageInput {
-                        flex: 1;
-                        min-height: 60px;
-                        max-height: 120px;
-                        resize: vertical;
-                        padding: 8px;
-                        border: 1px solid var(--vscode-input-border);
-                        background: var(--vscode-input-background);
-                        color: var(--vscode-input-foreground);
-                        border-radius: 4px;
-                        font-family: inherit;
-                        font-size: inherit;
-                    }
-                    .preview-container {
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 8px;
-                    }
-                    .image-preview {
-                        position: relative;
-                        width: 80px;
-                        height: 80px;
-                        border-radius: 4px;
-                        overflow: hidden;
-                    }
-                    .image-preview img {
-                        width: 100%;
-                        height: 100%;
-                        object-fit: cover;
-                    }
-                    .image-preview .remove {
-                        position: absolute;
-                        top: 2px;
-                        right: 2px;
-                        background: rgba(0,0,0,0.5);
-                        color: white;
-                        border: none;
-                        border-radius: 50%;
-                        width: 20px;
-                        height: 20px;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }
-                    button {
-                        padding: 6px 12px;
-                        background: var(--vscode-button-background);
-                        color: var(--vscode-button-foreground);
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        white-space: nowrap;
-                    }
-                    button:hover {
-                        background: var(--vscode-button-hoverBackground);
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="chat-container">
-                    <div class="messages" id="messages">
-                        <div class="message ai-message">你好！我是你的代码助手，有什么可以帮你的吗？</div>
-                    </div>
-                    <div class="input-container">
-                        <div class="preview-container" id="previewContainer"></div>
-                        <div class="input-area">
-                            <textarea
-                                id="messageInput"
-                                placeholder="输入消息... (可以粘贴图片)"
-                                onpaste="handlePaste(event)"
-                            ></textarea>
-                            <button onclick="sendMessage()">发送</button>
-                        </div>
-                    </div>
-                </div>
-                <script>
-                    const vscode = acquireVsCodeApi();
-                    const messagesDiv = document.getElementById('messages');
-                    const messageInput = document.getElementById('messageInput');
-                    const previewContainer = document.getElementById('previewContainer');
-                    let currentImage = null;
+    private async _handleGenerateCode(imageData: string) {
+        if (!this._view) return;
 
-                    function addMessage(text, isAI = false, image = null) {
-                        const messageDiv = document.createElement('div');
-                        messageDiv.className = 'message ' + (isAI ? 'ai-message' : 'user-message');
-                        
-                        if (image) {
-                            const img = document.createElement('img');
-                            img.src = image;
-                            messageDiv.appendChild(img);
-                        }
-                        
-                        if (text) {
-                            const textDiv = document.createElement('div');
-                            textDiv.textContent = text;
-                            messageDiv.appendChild(textDiv);
-                        }
-                        
-                        messagesDiv.appendChild(messageDiv);
-                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    }
+        console.log('请求服务端数据 2', imageData);
 
-                    function handlePaste(e) {
-                        const items = e.clipboardData.items;
-                        for (let item of items) {
-                            if (item.type.indexOf('image') !== -1) {
-                                const file = item.getAsFile();
-                                const reader = new FileReader();
-                                reader.onload = function(event) {
-                                    currentImage = event.target.result;
-                                    updatePreview();
-                                };
-                                reader.readAsDataURL(file);
-                                break;
+        try {
+            // 显示加载状态
+            this._view.webview.postMessage({ command: 'showLoading' });
+            
+            const imageBuffer = Buffer.from(imageData.split(',')[1], 'base64');
+            
+            const response = await axios.post('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+                model: "ep-20250213181329-6bk52",
+                messages: [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": `data:image/png;base64,${imageBuffer.toString('base64')}`
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": "请根据这个画板绘制的图生成对应的HTML和CSS代码"
                             }
-                        }
+                        ]
                     }
+                ],
+            }, {
+                headers: {
+                    'Authorization': 'Bearer 121c96f4-fede-424c-a915-a5c86b17996d',
+                    'Content-Type': 'application/json'
+                }
+            });
 
-                    function updatePreview() {
-                        previewContainer.innerHTML = '';
-                        if (currentImage) {
-                            const previewDiv = document.createElement('div');
-                            previewDiv.className = 'image-preview';
-                            previewDiv.innerHTML = \`
-                                <img src="\${currentImage}">
-                                <button class="remove" onclick="removeImage()">×</button>
-                            \`;
-                            previewContainer.appendChild(previewDiv);
-                        }
-                    }
+            console.log('请求服务端数据 3', response.data);
 
-                    function removeImage() {
-                        currentImage = null;
-                        updatePreview();
-                    }
+            if (response.data && response.data.choices && response.data.choices[0].message.content) {
+                const generatedCode = response.data.choices[0].message.content;
+                
+                // 发送成功消息到聊天窗口
+                this._view.webview.postMessage({
+                    command: 'receiveMessage',
+                    text: generatedCode,
+                    isAI: true
+                });
+            }
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`生成代码失败: ${error.message}`);
+            this._view.webview.postMessage({
+                command: 'receiveMessage',
+                text: `生成代码失败: ${error.message}`,
+                isAI: true
+            });
+        } finally {
+            // 隐藏加载状态
+            this._view.webview.postMessage({ command: 'hideLoading' });
+        }
+    }
 
-                    function sendMessage() {
-                        const text = messageInput.value.trim();
-                        if (text || currentImage) {
-                            addMessage(text, false, currentImage);
-                            vscode.postMessage({
-                                command: 'sendMessage',
-                                text: text,
-                                image: currentImage
-                            });
-                            messageInput.value = '';
-                            currentImage = null;
-                            updatePreview();
-                        }
-                    }
-
-                    messageInput.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessage();
-                        }
-                    });
-
-                    window.addEventListener('message', event => {
-                        const message = event.data;
-                        switch (message.command) {
-                            case 'receiveMessage':
-                                addMessage(message.text, message.isAI, message.image);
-                                break;
-                        }
-                    });
-                </script>
-            </body>
-            </html>
-        `;
+    private _getHtmlForWebview(webview: vscode.Webview) {
+        // 获取 webview 的内容
+        const chatHtmlPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'chat.html');
+        let chatHtmlContent = fs.readFileSync(chatHtmlPath.fsPath, 'utf8');
+        
+        // 替换 vscode-resource 路径
+        chatHtmlContent = chatHtmlContent.replace(
+            /#{webview.cspSource}/g,
+            webview.cspSource
+        );
+        
+        return chatHtmlContent;
     }
 } 

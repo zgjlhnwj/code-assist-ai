@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: https:; script-src 'unsafe-inline' https: #{webview.cspSource}; style-src 'unsafe-inline' https:;">
     <title>代码助手</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -115,6 +119,16 @@
             border-radius: 4px;
             margin: 5px 0;
         }
+        .generate-code-btn {
+            display: none;
+            margin-top: 8px;
+            padding: 4px 8px;
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
         button {
             padding: 8px 16px;
             background: var(--vscode-button-background);
@@ -127,10 +141,67 @@
         button:hover {
             background: var(--vscode-button-hoverBackground);
         }
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        .loading.active {
+            display: flex;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--vscode-button-background);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message pre {
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 4px;
+            background: var(--vscode-editor-background);
+            overflow-x: auto;
+        }
+        
+        .message code {
+            font-family: var(--vscode-editor-font-family);
+            font-size: 14px;
+        }
+        
+        .message p {
+            margin: 8px 0;
+        }
+        
+        .ai-message pre {
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-widget-border);
+        }
     </style>
 </head>
 <body>
     <div class="chat-container">
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div>正在生成代码...</div>
+        </div>
         <div class="messages" id="messages">
             <div class="message ai-message">你好！我是你的代码助手，有什么可以帮你的吗？</div>
         </div>
@@ -151,7 +222,16 @@
         const messagesDiv = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const previewContainer = document.getElementById('previewContainer');
+        const loadingElement = document.getElementById('loading');
         let currentImage = null;
+
+        function showLoading() {
+            loadingElement.classList.add('active');
+        }
+        
+        function hideLoading() {
+            loadingElement.classList.remove('active');
+        }
 
         function addMessage(text, isAI = false, image = null) {
             const messageDiv = document.createElement('div');
@@ -161,11 +241,37 @@
                 const img = document.createElement('img');
                 img.src = image;
                 messageDiv.appendChild(img);
+                
+                if (!isAI) {
+                    const generateBtn = document.createElement('button');
+                    generateBtn.className = 'generate-code-btn';
+                    generateBtn.textContent = '生成代码';
+                    generateBtn.style.display = 'block';
+                    generateBtn.onclick = () => {
+                        vscode.postMessage({
+                            command: 'generateCode',
+                            image: image
+                        });
+                    };
+                    messageDiv.appendChild(generateBtn);
+                }
             }
             
             if (text) {
                 const textDiv = document.createElement('div');
-                textDiv.textContent = text;
+                if (isAI) {
+                    marked.setOptions({
+                        highlight: function(code, lang) {
+                            if (lang && hljs.getLanguage(lang)) {
+                                return hljs.highlight(code, { language: lang }).value;
+                            }
+                            return hljs.highlightAuto(code).value;
+                        }
+                    });
+                    textDiv.innerHTML = marked.parse(text);
+                } else {
+                    textDiv.textContent = text;
+                }
                 messageDiv.appendChild(textDiv);
             }
             
@@ -234,6 +340,12 @@
             switch (message.command) {
                 case 'receiveMessage':
                     addMessage(message.text, message.isAI, message.image);
+                    break;
+                case 'showLoading':
+                    showLoading();
+                    break;
+                case 'hideLoading':
+                    hideLoading();
                     break;
             }
         });

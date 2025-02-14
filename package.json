@@ -61,5 +61,9 @@
     "mocha": "^10.2.0",
     "typescript": "^5.3.2",
     "@vscode/test-electron": "^2.3.6"
-  }
+  },
+  "files": [
+    "out/**/*",
+    "src/webview/**/*"
+  ]
 } 
