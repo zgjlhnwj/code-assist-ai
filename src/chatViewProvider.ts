@@ -56,8 +56,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private async _handleGenerateCode(imageData: string) {
         if (!this._view) return;
 
-        console.log('请求服务端数据 2', imageData);
-
         try {
             // 显示加载状态
             this._view.webview.postMessage({ command: 'showLoading' });
@@ -67,6 +65,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             const response = await axios.post('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
                 model: "ep-20250213181329-6bk52",
                 messages: [
+                    {
+                        "role": "system",
+                        "content": "你是一个专业的前端开发工程师，擅长将设计稿转换为精确的HTML和CSS代码。请你：\n" +
+                                  "1. 仔细分析图片中的设计，包括布局、颜色、间距等细节\n" +
+                                  "2. 生成符合现代前端开发标准的代码\n" +
+                                  "3. 使用语义化的HTML标签\n" +
+                                  "4. 添加适当的注释说明\n" +
+                                  "5. 确保代码具有良好的响应式特性\n" +
+                                  "6. 使用Markdown格式输出，将代码放在正确的代码块中"
+                    },
                     {
                         "role": "user",
                         "content": [
@@ -78,7 +86,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             },
                             {
                                 "type": "text",
-                                "text": "请根据这个画板绘制的图生成对应的HTML和CSS代码"
+                                "text": "这是一个界面设计图，请：\n" +
+                                        "1. 分析这个设计的布局结构\n" +
+                                        "2. 生成对应的HTML和CSS代码\n" +
+                                        "3. 确保代码结构清晰，并添加必要的注释\n" +
+                                        "4. 使用Markdown格式回复，将HTML和CSS代码分别放在对应的代码块中"
                             }
                         ]
                     }
@@ -103,6 +115,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 });
             }
         } catch (error: any) {
+            console.log('请求服务端数据 3', error);
             vscode.window.showErrorMessage(`生成代码失败: ${error.message}`);
             this._view.webview.postMessage({
                 command: 'receiveMessage',
