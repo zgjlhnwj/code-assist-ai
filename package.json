@@ -1,0 +1,65 @@
+{
+  "name": "my-vscode-extension",
+  "displayName": "My VSCode Extension",
+  "description": "一个示例 VSCode 扩展",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:my-vscode-extension.code-assist-ai"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [{
+      "command": "my-vscode-extension.code-assist-ai",
+      "title": "打开代码助手",
+      "icon": "$(comment-discussion)"
+    }],
+    "languages": [{
+      "id": "json",
+      "aliases": ["JSON", "json"],
+      "extensions": [".json"]
+    }],
+    "viewsContainers": {
+      "activitybar": [{
+        "id": "code-assist-ai",
+        "title": "代码助手",
+        "icon": "$(comment-discussion)"
+      }]
+    },
+    "views": {
+      "code-assist-ai": [{
+        "type": "webview",
+        "id": "code-assist-ai.chatView",
+        "name": "AI 助手",
+        "icon": "$(comment-discussion)",
+        "contextualTitle": "AI 助手"
+      }]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "18.x",
+    "@types/mocha": "^10.0.3",
+    "@types/glob": "^8.1.0",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0",
+    "eslint": "^8.54.0",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
+    "typescript": "^5.3.2",
+    "@vscode/test-electron": "^2.3.6"
+  }
+} 
