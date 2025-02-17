@@ -312,6 +312,8 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             z-index: 1000;
             padding: 8px;
+            max-height: 400px;
+            overflow-y: visible;
         }
 
         .context-panel.active {
@@ -362,6 +364,7 @@
 
         .file-section {
             margin-top: 8px;
+            overflow-y: auto;
         }
 
         .file-section-header {
@@ -428,6 +431,57 @@
         #addedFiles:empty {
             display: none;
         }
+
+        .context-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .context-panel::-webkit-scrollbar-track {
+            background: var(--vscode-scrollbarSlider-background);
+            border-radius: 4px;
+        }
+
+        .context-panel::-webkit-scrollbar-thumb {
+            background: var(--vscode-scrollbarSlider-hoverBackground);
+            border-radius: 4px;
+        }
+
+        .context-panel::-webkit-scrollbar-thumb:hover {
+            background: var(--vscode-scrollbarSlider-activeBackground);
+        }
+
+        .search-box-container {
+            position: sticky;
+            top: 0;
+            background: var(--vscode-editor-background);
+            padding: 8px 0;
+            margin: -8px 0 8px 0;
+            z-index: 1;
+        }
+
+        #availableFiles {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 4px;
+        }
+
+        #availableFiles::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #availableFiles::-webkit-scrollbar-track {
+            background: var(--vscode-scrollbarSlider-background);
+            border-radius: 4px;
+        }
+
+        #availableFiles::-webkit-scrollbar-thumb {
+            background: var(--vscode-scrollbarSlider-hoverBackground);
+            border-radius: 4px;
+        }
+
+        #availableFiles::-webkit-scrollbar-thumb:hover {
+            background: var(--vscode-scrollbarSlider-activeBackground);
+        }
     </style>
 </head>
 <body>
@@ -488,13 +542,15 @@
                         </div>
                     </div>
                     <div class="context-panel" id="contextPanel">
-                        <input 
-                            type="text" 
-                            class="search-box" 
-                            placeholder="Search files by name" 
-                            onclick="handleSearchClick(event)"
-                            readonly
-                        >
+                        <div class="search-box-container">
+                            <input 
+                                type="text" 
+                                class="search-box" 
+                                placeholder="Search files by name" 
+                                onclick="handleSearchClick(event)"
+                                readonly
+                            >
+                        </div>
                         <div class="file-section">
                             <div class="file-section-header">ADDED</div>
                             <div id="addedFiles"></div>
@@ -829,13 +885,21 @@
             // 获取文件图标
             const iconPath = getFileIcon(file.type);
             
+            // 处理路径显示
+            let relativePath = file.path;
+            // 尝试找到 workspace 目录后的路径
+            const workspaceIndex = file.path.indexOf('/code-assist-ai/');
+            if (workspaceIndex !== -1) {
+                relativePath = file.path.substring(workspaceIndex + '/code-assist-ai/'.length);
+            }
+            
             fileItem.innerHTML = `
                 <div class="file-item-content">
                     <svg class="file-icon" viewBox="0 0 16 16">
                         <path d="${iconPath}"/>
                     </svg>
                     <span class="file-name">${file.name}</span>
-                    <span class="file-path">${file.path}</span>
+                    <span class="file-path">${relativePath}</span>
                 </div>
             `;
             return fileItem;
