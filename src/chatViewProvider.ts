@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import * as fs from 'fs';
+import * as path from 'path';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
@@ -30,6 +31,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'generateCode':
                     await this._handleGenerateCode(data.image);
+                    break;
+                case 'analyzeImage':
+                    await this._handleAnalyzeImage(data.image);
+                    break;
+                case 'generateVariation':
+                    await this._handleGenerateVariation(data.image);
+                    break;
+                case 'getWorkspaceFiles':
+                    await this.openFileDialog();
                     break;
             }
         });
@@ -128,6 +138,103 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    private async _handleAnalyzeImage(imageData: string) {
+        if (!this._view) return;
+
+        try {
+            this._view.webview.postMessage({ command: 'showLoading' });
+            
+            const imageBuffer = Buffer.from(imageData.split(',')[1], 'base64');
+            
+            const response = await axios.post('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+                model: "ep-20250213181329-6bk52",
+                messages: [
+                    {
+                        "role": "system",
+                        "content": "你是一个专业的图像分析专家，请详细分析图片中的内容、布局、风格等要素。"
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": `data:image/png;base64,${imageBuffer.toString('base64')}`
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": "请分析这张图片的内容和设计特点。"
+                            }
+                        ]
+                    }
+                ]
+            }, {
+                headers: {
+                    'Authorization': 'Bearer 121c96f4-fede-424c-a915-a5c86b17996d',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.data?.choices?.[0]?.message?.content) {
+                this._view.webview.postMessage({
+                    command: 'receiveMessage',
+                    text: response.data.choices[0].message.content,
+                    isAI: true
+                });
+            }
+        } catch (error: any) {
+            console.error('分析图片失败:', error);
+            this._view.webview.postMessage({
+                command: 'receiveMessage',
+                text: `分析图片失败: ${error.message}`,
+                isAI: true
+            });
+        } finally {
+            this._view.webview.postMessage({ command: 'hideLoading' });
+        }
+    }
+
+    private async _handleGenerateVariation(imageData: string) {
+        if (!this._view) return;
+
+        try {
+            this._view.webview.postMessage({ command: 'showLoading' });
+            
+            const imageBuffer = Buffer.from(imageData.split(',')[1], 'base64');
+            
+            // 这里需要根据实际的API调整请求
+            const response = await axios.post('https://ark.cn-beijing.volces.com/api/v3/images/variations', {
+                image: imageBuffer.toString('base64'),
+                n: 1,
+                size: "1024x1024"
+            }, {
+                headers: {
+                    'Authorization': 'Bearer 121c96f4-fede-424c-a915-a5c86b17996d',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.data?.data?.[0]?.url) {
+                this._view.webview.postMessage({
+                    command: 'receiveMessage',
+                    text: "生成的变体图片：",
+                    image: response.data.data[0].url,
+                    isAI: true
+                });
+            }
+        } catch (error: any) {
+            console.error('生成变体失败:', error);
+            this._view.webview.postMessage({
+                command: 'receiveMessage',
+                text: `生成变体失败: ${error.message}`,
+                isAI: true
+            });
+        } finally {
+            this._view.webview.postMessage({ command: 'hideLoading' });
+        }
+    }
+
     private _getHtmlForWebview(webview: vscode.Webview) {
         // 获取 webview 的内容
         const chatHtmlPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'chat.html');
@@ -140,5 +247,47 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         );
         
         return chatHtmlContent;
+    }
+
+    private async openFileDialog() {
+        try {
+            // 打开文件选择对话框，只允许选择文件夹
+            const folderUris = await vscode.window.showOpenDialog({
+                canSelectFiles: false,
+                canSelectFolders: true,
+                canSelectMany: false,
+                openLabel: 'Select Folder'
+            });
+
+            if (folderUris && folderUris.length > 0) {
+                const selectedFolder = folderUris[0];
+                
+                // 获取文件夹下的所有文件
+                const files = await vscode.workspace.findFiles(
+                    new vscode.RelativePattern(selectedFolder.fsPath, '**/*'),
+                    '**/node_modules/**'
+                );
+
+                // 转换文件列表，保持扁平结构
+                const fileList = files.map(file => ({
+                    name: path.basename(file.fsPath),
+                    path: vscode.workspace.asRelativePath(file.fsPath),
+                    type: path.extname(file.fsPath).slice(1) || 'file',
+                    selected: false
+                }));
+
+                // 按照路径排序
+                fileList.sort((a, b) => a.path.localeCompare(b.path));
+
+                // 发送文件列表回 webview
+                this._view?.webview.postMessage({
+                    command: 'fileList',
+                    files: fileList
+                });
+            }
+        } catch (error) {
+            console.error('Error opening file dialog:', error);
+            vscode.window.showErrorMessage('Failed to open folder');
+        }
     }
 } 
