@@ -145,62 +145,56 @@ function addMessage(text, isAI = false, image = null) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-function handlePaste(e) {
-    const items = e.clipboardData.items;
-    for (let item of items) {
-        if (item.type.indexOf('image') !== -1) {
-            const file = item.getAsFile();
+function handlePaste(event) {
+    const items = event.clipboardData.items;
+    for (const item of items) {
+        if (item.type.indexOf('image') === 0) {
+            const blob = item.getAsFile();
             const reader = new FileReader();
-            reader.onload = function(event) {
-                currentImage = event.target.result;
-                updatePreview();
+            reader.onload = function(e) {
+                addImagePreview(e.target.result);
             };
-            reader.readAsDataURL(file);
-            break;
+            reader.readAsDataURL(blob);
         }
     }
 }
 
-function updatePreview() {
-    previewContainer.innerHTML = '';
-    if (currentImage) {
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'image-preview';
-        previewDiv.innerHTML = `
-            <img src="${currentImage}">
-            <button class="remove" onclick="removeImage()">×</button>
-        `;
-        previewContainer.appendChild(previewDiv);
-    }
-}
-
-function removeImage() {
-    currentImage = null;
-    updatePreview();
+function addImagePreview(imageData) {
+    const previewContainer = document.getElementById('previewContainer');
+    
+    const previewWrapper = document.createElement('div');
+    previewWrapper.className = 'image-preview';
+    
+    const img = document.createElement('img');
+    img.src = imageData;
+    
+    const removeButton = document.createElement('button');
+    removeButton.className = 'remove-image';
+    removeButton.innerHTML = '×';
+    removeButton.onclick = function() {
+        previewContainer.removeChild(previewWrapper);
+    };
+    
+    previewWrapper.appendChild(img);
+    previewWrapper.appendChild(removeButton);
+    previewContainer.appendChild(previewWrapper);
 }
 
 function handleImageUpload() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.style.display = 'none';
-    document.body.appendChild(input);
+    input.multiple = true; // 允许选择多个文件
     
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
+    input.onchange = function(e) {
+        const files = e.target.files;
+        for (const file of files) {
             const reader = new FileReader();
-            reader.onload = function(event) {
-                currentImage = event.target.result;
-                updatePreview();
+            reader.onload = function(e) {
+                addImagePreview(e.target.result);
             };
             reader.readAsDataURL(file);
         }
-        document.body.removeChild(input);
-    };
-    
-    input.oncancel = () => {
-        document.body.removeChild(input);
     };
     
     input.click();
@@ -208,6 +202,7 @@ function handleImageUpload() {
 
 function sendMessage() {
     const text = messageInput.value.trim();
+    debugger;
     if (text || currentImage) {
         addMessage(text, false, currentImage);
         if (isInVSCode()) {
