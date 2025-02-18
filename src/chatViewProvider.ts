@@ -38,16 +38,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private _handleMessage(text: string, imageDataUrl?: string) {
         if (!this._view) return;
 
-        // 处理消息和图片
+        // 如果只有图片没有文本，则不显示AI回复
+        if (imageDataUrl && !text) {
+            return;
+        }
+
         setTimeout(() => {
             let responseText = `收到消息: ${text}`;
-            if (imageDataUrl) {
-                responseText = '收到图片消息';
-            }
             this._view?.webview.postMessage({
                 command: 'receiveMessage',
                 text: responseText,
-                image: imageDataUrl,
                 isAI: true
             });
         }, 1000);

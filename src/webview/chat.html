@@ -116,8 +116,11 @@
         }
         .message img {
             max-width: 100%;
+            max-height: 75px;
+            object-fit: cover;
             border-radius: 4px;
             margin: 5px 0;
+            cursor: pointer;
         }
         .generate-code-btn {
             display: none;
@@ -301,7 +304,7 @@
                 const previewDiv = document.createElement('div');
                 previewDiv.className = 'image-preview';
                 previewDiv.innerHTML = `
-                    <img src="${currentImage}">
+                    <img src="${currentImage}" onclick="window.open('${currentImage}', '_blank')">
                     <button class="remove" onclick="removeImage()">×</button>
                 `;
                 previewContainer.appendChild(previewDiv);
@@ -324,7 +327,7 @@
                 });
                 messageInput.value = '';
                 currentImage = null;
-                updatePreview();
+                // updatePreview();
             }
         }
 
