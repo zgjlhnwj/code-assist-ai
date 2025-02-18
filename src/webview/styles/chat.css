@@ -129,6 +129,13 @@ body {
     height: 16px;
     fill: currentColor;
 }
+.ai-globe-context {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background-color: aliceblue;
+    min-height: 20px;
+}
 
 .preview-container {
     display: flex;
@@ -139,8 +146,8 @@ body {
 
 .image-preview {
     position: relative;
-    width: 120px;
-    height: 120px;
+    width: 60px;
+    height: 60px;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -286,23 +293,37 @@ body {
 }
 
 .search-box-container {
-    position: sticky;
-    top: 0;
-    background: var(--vscode-editor-background);
-    padding: 8px 0;
-    margin: -8px 0 8px 0;
-    z-index: 1;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--vscode-input-background);
 }
 
 .search-box {
-    width: 100%;
+    border: none;
     padding: 6px 8px;
-    background: var(--vscode-input-background);
-    border: 1px solid var(--vscode-input-border);
-    border-radius: 4px;
+    background: transparent;
     color: var(--vscode-input-foreground);
-    font-size: 13px;
-    margin-bottom: 8px;
+    flex: 1;
+}
+
+.search-box:focus {
+    outline: none;
+}
+
+.confirm-button {
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    color: var(--vscode-button-foreground);
+    cursor: pointer;
+    border-left: 1px solid var(--vscode-input-border);
+}
+
+.confirm-button:hover {
+    background-color: var(--vscode-button-hoverBackground);
 }
 
 .file-section {

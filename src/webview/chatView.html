@@ -40,9 +40,11 @@
         </div>
         <div id="selectedContext"></div>
         <div class="input-container">
-            <div class="preview-container" id="previewContainer"></div>
             <div class="input-area">
                 <div class="input-box">
+                    <div class="ai-globe-context" id="aiGlobeContext">
+                        <div class="preview-container" id="previewContainer"></div>
+                    </div>
                     <textarea
                         id="messageInput"
                         placeholder="输入消息... (可以粘贴图片)"
@@ -80,6 +82,7 @@
                                 placeholder="Search files by name" 
                                 onclick="handleSearchClick(event)"
                             >
+                            <button class="confirm-button" onclick="handleConfirmSearch()">确认</button>
                         </div>
                         <div class="file-section">
                             <div class="file-section-header">ADDED</div>

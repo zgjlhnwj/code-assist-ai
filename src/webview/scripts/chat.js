@@ -1,9 +1,18 @@
 // 检测是否在VSCode环境中运行
+/**
+ * 检查当前环境是否为VSCode环境。
+ * 通过尝试调用acquireVsCodeApi函数来判断，该函数仅在VSCode的Webview环境中可用。
+ * 
+ * @returns {boolean} 如果当前环境是VSCode环境，则返回true；否则返回false。
+ */
 function isInVSCode() {
     try {
+        // 尝试调用acquireVsCodeApi函数
+        // 若调用成功，说明当前环境是VSCode环境
         acquireVsCodeApi();
         return true;
     } catch (e) {
+        // 若调用失败，捕获异常并返回false，说明当前环境不是VSCode环境
         return false;
     }
 }
