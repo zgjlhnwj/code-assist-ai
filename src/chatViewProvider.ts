@@ -237,16 +237,33 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     private _getHtmlForWebview(webview: vscode.Webview) {
         // 获取 webview 的内容
-        const chatHtmlPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'chat.html');
-        let chatHtmlContent = fs.readFileSync(chatHtmlPath.fsPath, 'utf8');
+        const htmlPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'chatView.html');
+        let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
         
-        // 替换 vscode-resource 路径
-        chatHtmlContent = chatHtmlContent.replace(
-            /#{webview.cspSource}/g,
-            webview.cspSource
-        );
+        // 获取文件的磁盘路径
+        const scriptPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'scripts', 'chat.js');
+        const stylePath = vscode.Uri.joinPath(this._extensionUri, 'src', 'webview', 'styles', 'chat.css');
         
-        return chatHtmlContent;
+        // 转换为 webview 可用的 URI
+        const scriptUri = webview.asWebviewUri(scriptPath);
+        const styleUri = webview.asWebviewUri(stylePath);
+        
+        // 替换占位符
+        htmlContent = htmlContent
+            .replace(/#{webview.cspSource}/g, webview.cspSource)
+            .replace(/#{scriptUri}/g, scriptUri.toString())
+            .replace(/#{styleUri}/g, styleUri.toString());
+        
+        return htmlContent;
+    }
+
+    private getNonce(): string {
+        let text = '';
+        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        for (let i = 0; i < 32; i++) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
     }
 
     private async openFileDialog() {

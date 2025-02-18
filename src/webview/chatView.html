@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码助手</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="#{styleUri}">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div>正在生成代码...</div>
+        </div>
+        <div class="messages" id="messages">
+            <div class="message ai-message">你好！我是你的代码助手，有什么可以帮你的吗？</div>
+        </div>
+        <div id="selectedContext"></div>
+        <div class="input-container">
+            <div class="preview-container" id="previewContainer"></div>
+            <div class="input-area">
+                <div class="input-box">
+                    <textarea
+                        id="messageInput"
+                        placeholder="输入消息... (可以粘贴图片)"
+                        onpaste="handlePaste(event)"
+                    ></textarea>
+                    <div class="input-actions">
+                        <div class="input-actions-left">
+                            <button class="action-button" onclick="handleImageUpload()">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                </svg>
+                                添加图片
+                            </button>
+                        </div>
+                        <div class="input-actions-right">
+                            <button class="action-button" onclick="handleAddContext()">
+                                <svg viewBox="0 0 16 16" width="16" height="16">
+                                    <path d="M14.5 3h-4.79l-.15-.15L8.71 2H3.5l-.5.5v10l.5.5h11l.5-.5v-9l-.5-.5zm-.51 9H4V3h4.29l.15.15L9.29 4H14v8z"/>
+                                </svg>
+                                Add Context
+                            </button>
+                            <button class="action-button" onclick="sendMessage()">
+                                <svg viewBox="0 0 16 16" width="16" height="16">
+                                    <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.5.5 0 0 1-.898.03l-2.777-4.445-4.445-2.777a.5.5 0 0 1 .03-.898L14.546.002a.5.5 0 0 1 .54.11z"/>
+                                </svg>
+                                发送
+                            </button>
+                        </div>
+                    </div>
+                    <div class="context-panel" id="contextPanel">
+                        <div class="search-box-container">
+                            <input 
+                                type="text" 
+                                class="search-box" 
+                                placeholder="Search files by name" 
+                                onclick="handleSearchClick(event)"
+                            >
+                        </div>
+                        <div class="file-section">
+                            <div class="file-section-header">ADDED</div>
+                            <div id="addedFiles"></div>
+                        </div>
+                        <div class="file-section">
+                            <div class="file-section-header">AVAILABLE</div>
+                            <div id="availableFiles"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="#{scriptUri}"></script>
+</body>
+</html> 
