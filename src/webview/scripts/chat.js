@@ -57,7 +57,11 @@ let currentContextImage = null;
 
 // 添加全局数组来存储多个图片数据
 let imageDataArray = [];
-
+// 添加全局数组存储选中的文件
+let selectedContextFiles = [];
+// 将选中的文件数组暴露给全局
+window.selectedContextFiles = selectedContextFiles;
+// 将图片数组暴露给全局
 window.imageDataArray = imageDataArray;
 
 // 浏览器环境下的消息处理器
@@ -216,6 +220,11 @@ function handleImageUpload() {
 function sendMessage() {
     const text = messageInput.value.trim();
     if (text || imageDataArray.length > 0) {
+        // 添加文件上下文信息
+        const contextInfo = selectedContextFiles.length > 0 ? {
+            files: selectedContextFiles.map(f => ({ path: f.path, name: f.name }))
+        } : null;
+
         // 发送所有图片
         imageDataArray.forEach(imageData => {
             addMessage(text, false, imageData);
@@ -223,18 +232,19 @@ function sendMessage() {
                 vscode.postMessage({
                     command: 'sendMessage',
                     text: text,
-                    image: imageData
+                    image: imageData,
+                    context: contextInfo
                 });
             }
         });
 
         if (!imageDataArray.length && text) {
-            // 如果只有文本没有图片，发送一次消息
             addMessage(text, false);
             if (isInVSCode()) {
                 vscode.postMessage({
                     command: 'sendMessage',
-                    text: text
+                    text: text,
+                    context: contextInfo
                 });
             }
         }
@@ -412,21 +422,24 @@ function updateSearchBoxDisplay(selectedFiles) {
 }
 
 function handleConfirmSearch() {
-    const selectedFiles = document.querySelectorAll('#addedFiles .file-item.selected');
+    const selectedFiles = window.currentFiles ? window.currentFiles.filter(f => f.selected) : [];
     const selectedFilesContainer = document.getElementById('selectedFiles');
     
+    // 清空现有的显示
+    selectedFilesContainer.innerHTML = '';
+    
+    // 更新全局存储
+    selectedContextFiles = selectedFiles;
+    
     selectedFiles.forEach(file => {
-        const fileName = file.querySelector('.file-name').textContent;
-        const filePath = file.querySelector('.file-path').textContent;
-        
         // 创建选中文件标签
         const fileTag = document.createElement('div');
         fileTag.className = 'selected-file-item';
         fileTag.innerHTML = `
-            <span>${fileName}</span>
-            <span class="remove-file" onclick="removeSelectedFile(this, '${filePath}')">×</span>
+            <span>${file.name}</span>
+            <span class="remove-file" onclick="removeSelectedFile(this, '${file.path}')">×</span>
         `;
-        fileTag.dataset.path = filePath;
+        fileTag.dataset.path = file.path;
         
         selectedFilesContainer.appendChild(fileTag);
     });
@@ -436,13 +449,27 @@ function handleConfirmSearch() {
 }
 
 function removeSelectedFile(element, filePath) {
+    // 从全局存储中移除文件
+    const fileIndex = selectedContextFiles.findIndex(f => f.path === filePath);
+    if (fileIndex > -1) {
+        selectedContextFiles.splice(fileIndex, 1);
+    }
+    
+    // 更新 currentFiles 中的选中状态
+    const currentFileIndex = window.currentFiles.findIndex(f => f.path === filePath);
+    if (currentFileIndex > -1) {
+        window.currentFiles[currentFileIndex].selected = false;
+    }
+    
     // 移除选中的文件标签
     element.parentElement.remove();
     
-    // 如果需要，也可以更新addedFiles中的选中状态
-    const fileItem = document.querySelector(`#addedFiles .file-item[data-path="${filePath}"]`);
-    if (fileItem) {
-        fileItem.classList.remove('selected');
+    // 如果在 VSCode 环境中，通知更新
+    if (isInVSCode()) {
+        vscode.postMessage({
+            command: 'selectFile',
+            files: selectedContextFiles
+        });
     }
 }
 
