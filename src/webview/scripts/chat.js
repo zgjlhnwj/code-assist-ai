@@ -387,6 +387,41 @@ function updateSearchBoxDisplay(selectedFiles) {
     }
 }
 
+function handleConfirmSearch() {
+    const selectedFiles = document.querySelectorAll('#addedFiles .file-item.selected');
+    const selectedFilesContainer = document.getElementById('selectedFiles');
+    
+    selectedFiles.forEach(file => {
+        const fileName = file.querySelector('.file-name').textContent;
+        const filePath = file.querySelector('.file-path').textContent;
+        
+        // 创建选中文件标签
+        const fileTag = document.createElement('div');
+        fileTag.className = 'selected-file-item';
+        fileTag.innerHTML = `
+            <span>${fileName}</span>
+            <span class="remove-file" onclick="removeSelectedFile(this, '${filePath}')">×</span>
+        `;
+        fileTag.dataset.path = filePath;
+        
+        selectedFilesContainer.appendChild(fileTag);
+    });
+    
+    // 关闭上下文面板
+    document.getElementById('contextPanel').classList.remove('active');
+}
+
+function removeSelectedFile(element, filePath) {
+    // 移除选中的文件标签
+    element.parentElement.remove();
+    
+    // 如果需要，也可以更新addedFiles中的选中状态
+    const fileItem = document.querySelector(`#addedFiles .file-item[data-path="${filePath}"]`);
+    if (fileItem) {
+        fileItem.classList.remove('selected');
+    }
+}
+
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     // 初始化搜索框
@@ -435,5 +470,5 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             sendMessage();
         }
-    });
+    }); 
 }); 
