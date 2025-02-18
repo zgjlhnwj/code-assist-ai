@@ -7,7 +7,27 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/vs2015.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-    <link rel="stylesheet" href="#{styleUri}">
+    <!-- <link rel="stylesheet" href="#{styleUri}""> -->
+    <script>
+        (function createStylesheetLink() {
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            var styleUri = '#{styleUri}';
+            // 检查是否在 VSCode 环境中（styleUri 是否被正确替换）
+            if (styleUri && !styleUri.includes('#{')) {
+                link.href = styleUri;
+            } else {
+                // 在浏览器环境中使用本地路径
+                link.href = './styles/chat.css';
+            }
+            link.onerror = function() {
+                // 如果加载失败，使用本地样式表
+                this.onerror = null;
+                this.href = './styles/chat.css';
+            };
+            document.head.appendChild(link);
+        })();
+    </script>
 </head>
 <body>
     <div class="chat-container">
@@ -74,6 +94,20 @@
             </div>
         </div>
     </div>
-    <script src="#{scriptUri}"></script>
 </body>
 </html> 
+<script>
+    // 动态加载脚本
+    (function createScript() {
+            var script = document.createElement('script');
+            var scriptUri = '#{scriptUri}';
+            // 检查是否在 VSCode 环境中（scriptUri 是否被正确替换）
+            if (scriptUri && !scriptUri.includes('#{')) {
+                script.src = scriptUri;
+            } else {
+                // 在浏览器环境中使用本地路径
+                script.src = './scripts/chat.js';
+            }
+            document.body.appendChild(script);
+        })();
+</script>
