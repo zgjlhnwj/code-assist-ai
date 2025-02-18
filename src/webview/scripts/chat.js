@@ -55,6 +55,11 @@ const contextMenu = document.getElementById('imageContextMenu');
 let currentImage = null;
 let currentContextImage = null;
 
+// 添加全局数组来存储多个图片数据
+let imageDataArray = [];
+
+window.imageDataArray = imageDataArray;
+
 // 浏览器环境下的消息处理器
 const browserMessageHandlers = {
     receiveMessage: (text, isAI = true, image = null) => {
@@ -162,6 +167,9 @@ function handlePaste(event) {
 function addImagePreview(imageData) {
     const previewContainer = document.getElementById('previewContainer');
     
+    // 将图片数据添加到数组中
+    imageDataArray.push(imageData);
+    
     const previewWrapper = document.createElement('div');
     previewWrapper.className = 'image-preview';
     
@@ -172,6 +180,11 @@ function addImagePreview(imageData) {
     removeButton.className = 'remove-image';
     removeButton.innerHTML = '×';
     removeButton.onclick = function() {
+        // 从数组中移除对应的图片数据
+        const index = imageDataArray.indexOf(imageData);
+        if (index > -1) {
+            imageDataArray.splice(index, 1);
+        }
         previewContainer.removeChild(previewWrapper);
     };
     
@@ -202,23 +215,39 @@ function handleImageUpload() {
 
 function sendMessage() {
     const text = messageInput.value.trim();
-    debugger;
-    if (text || currentImage) {
-        addMessage(text, false, currentImage);
-        if (isInVSCode()) {
-            vscode.postMessage({
-                command: 'sendMessage',
-                text: text,
-                image: currentImage
-            });
-        } else {
+    if (text || imageDataArray.length > 0) {
+        // 发送所有图片
+        imageDataArray.forEach(imageData => {
+            addMessage(text, false, imageData);
+            if (isInVSCode()) {
+                vscode.postMessage({
+                    command: 'sendMessage',
+                    text: text,
+                    image: imageData
+                });
+            }
+        });
+
+        if (!imageDataArray.length && text) {
+            // 如果只有文本没有图片，发送一次消息
+            addMessage(text, false);
+            if (isInVSCode()) {
+                vscode.postMessage({
+                    command: 'sendMessage',
+                    text: text
+                });
+            }
+        }
+
+        if (!isInVSCode()) {
             // 浏览器环境下的模拟响应
             setTimeout(() => {
                 addMessage('这是浏览器环境下的模拟回复。', true);
             }, 500);
         }
+        
         messageInput.value = '';
-        currentImage = null;
+        imageDataArray = []; // 清空图片数组
         updatePreview();
     }
 }
