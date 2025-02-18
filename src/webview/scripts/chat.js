@@ -219,46 +219,31 @@ function handleImageUpload() {
 
 function sendMessage() {
     const text = messageInput.value.trim();
-    if (text || imageDataArray.length > 0) {
-        // 添加文件上下文信息
-        const contextInfo = selectedContextFiles.length > 0 ? {
-            files: selectedContextFiles.map(f => ({ path: f.path, name: f.name }))
-        } : null;
 
-        // 发送所有图片
-        imageDataArray.forEach(imageData => {
-            addMessage(text, false, imageData);
-            if (isInVSCode()) {
-                vscode.postMessage({
-                    command: 'sendMessage',
-                    text: text,
-                    image: imageData,
-                    context: contextInfo
-                });
+    console.log('发送消息:', {
+        text,
+        imageDataArray,
+        selectedContextFiles
+        
+    });
+    
+    if (isInVSCode()) {
+        // 使用 console.log 输出调试信息
+        console.log('发送消息:', {
+            text,
+            imageDataArray,
+            selectedContextFiles
+        });
+        
+        vscode.postMessage({
+            command: 'console',
+            type: 'log',
+            data: {
+                text: text,
+                imageDataArray: imageDataArray,
+                selectedContextFiles: selectedContextFiles
             }
         });
-
-        if (!imageDataArray.length && text) {
-            addMessage(text, false);
-            if (isInVSCode()) {
-                vscode.postMessage({
-                    command: 'sendMessage',
-                    text: text,
-                    context: contextInfo
-                });
-            }
-        }
-
-        if (!isInVSCode()) {
-            // 浏览器环境下的模拟响应
-            setTimeout(() => {
-                addMessage('这是浏览器环境下的模拟回复。', true);
-            }, 500);
-        }
-        
-        messageInput.value = '';
-        imageDataArray = []; // 清空图片数组
-        updatePreview();
     }
 }
 
@@ -522,4 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sendMessage();
         }
     }); 
-}); 
+});
+
+console.log('Chat webview loaded'); // 这会帮助你在开发者工具中找到你的代码 
