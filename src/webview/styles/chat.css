@@ -70,7 +70,7 @@ body {
     background: var(--vscode-input-background);
     border: 1px solid var(--vscode-input-border);
     border-radius: 8px;
-    padding: 12px;
+    padding: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -79,7 +79,7 @@ body {
     min-height: 44px;
     max-height: 200px;
     resize: none;
-    background: transparent;
+    background: #6565658d;
     color: var(--vscode-input-foreground);
     font-family: inherit;
     font-size: 14px;
@@ -87,7 +87,6 @@ body {
     outline: none;
     padding: 8px;
     border: none;
-    border-top: 1px solid var(--vscode-widget-border);
 }
 
 .input-actions {
@@ -133,14 +132,13 @@ body {
 .ai-globe-context {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    min-height: 20px;
 }
 
 .preview-container {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    padding: 0 0 5px 0;
 }
 
 .image-preview {
@@ -427,11 +425,10 @@ body {
     align-items: center;
     gap: 6px;
     padding: 2px 4px;
-    background: var(--vscode-badge-background);
+    background: #6565658d;
     color: var(--vscode-badge-foreground);
     border-radius: 4px;
     font-size: 12px;
-    border: 1px solid #cccccc;
 }
 
 .selected-file-item .remove-file {
