@@ -59,10 +59,8 @@ let currentContextImage = null;
 let imageDataArray = [];
 // 添加全局数组存储选中的文件
 let selectedContextFiles = [];
-// 将选中的文件数组暴露给全局
-window.selectedContextFiles = selectedContextFiles;
-// 将图片数组暴露给全局
-window.imageDataArray = imageDataArray;
+// 会话参数
+let sessionParams = [];
 
 // 浏览器环境下的消息处理器
 const browserMessageHandlers = {
@@ -236,7 +234,7 @@ function handleImageUpload() {
     input.click();
 }
 
-function sendMessage() {
+async function sendMessage() {
     const text = messageInput.value.trim();
     const images = imageDataArray;
 
@@ -244,6 +242,37 @@ function sendMessage() {
     if (!text && images.length === 0) {
         return;
     }
+
+    // 构建消息内容数组
+    const content = [];
+    
+    // 如果有文本，添加文本内容
+    if (text) {
+        content.push({
+            type: "text",
+            text: text
+        });
+    }
+    
+    // 如果有图片，添加图片内容
+    if (images && images.length > 0) {
+        images.forEach(imgSrc => {
+            content.push({
+                type: "image_url",
+                image_url: {
+                    url: imgSrc
+                }
+            });
+        });
+    }
+
+    // 构建完整的消息对象
+    const messageData = {
+        role: "user",
+        content: content
+    };
+
+    sessionParams.push(messageData);
 
     // 添加用户消息到聊天界面
     addMessage(text, false, images);
@@ -254,14 +283,24 @@ function sendMessage() {
     previewContainer.innerHTML = '';
     imageDataArray = [];
 
-    // 发送消息到 VSCode
-    if (isInVSCode()) {
-        vscode.postMessage({
-            command: 'sendMessage',
-            text: text,
-            images: images,
-            selectedFiles: selectedContextFiles
+    try {
+        const response = await callAPI();
+        currentChat.messages.push({
+            role: 'assistant',
+            content: response,
+            timestamp: new Date().toISOString()
         });
+        updateChatWindow();
+    } catch (error) {
+        console.error('发送消息错误:', error);
+        currentChat.messages.push({
+            role: 'assistant',
+            content: '抱歉，发生了错误，请稍后重试。',
+            timestamp: new Date().toISOString()
+        });
+        updateChatWindow();
+    } finally {
+        removeImage();
     }
 }
 
@@ -526,5 +565,173 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }); 
 });
+
+// 添加创建消息元素的辅助函数
+function createMessageElement(role) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${role === 'assistant' ? 'ai-message' : 'user-message'}`;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-text';
+    messageDiv.appendChild(contentDiv);
+    
+    return messageDiv;
+}
+
+// 添加复制代码的函数
+function copyCode(button) {
+    const codeBlock = button.parentElement.querySelector('code');
+    const text = codeBlock.textContent;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        // 更新复制按钮文本
+        const originalText = button.textContent;
+        button.textContent = '已复制!';
+        button.classList.add('copied');
+        
+        // 2秒后恢复原始文本
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('copied');
+        }, 2000);
+    }).catch(err => {
+        console.error('复制失败:', err);
+    });
+}
+
+// 修改代码高亮处理部分
+function addCopyButtonToCodeBlock(codeBlock) {
+    const pre = codeBlock.parentElement;
+    if (!pre.querySelector('.copy-button')) {
+        const button = document.createElement('button');
+        button.className = 'copy-button';
+        button.textContent = '复制';
+        button.onclick = function() {
+            copyCode(this);
+        };
+        pre.appendChild(button);
+    }
+}
+
+async function callAPI() {
+    try {
+        const response = await fetch('https://demo-rtcai.ledupeiyou.com/proxyAIGCFetch/chat', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer 4044c019-018b-4973-8ec3-34295dc2b885',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: "bot-20250213153935-2x2qt",
+                stream: true,
+                stream_options: { include_usage: true },
+                messages: sessionParams
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('API 请求失败');
+        }
+
+        // 创建一个新的回复消息容器
+        const messageDiv = createMessageElement('assistant');
+        messagesDiv.appendChild(messageDiv);
+        const contentDiv = messageDiv.querySelector('.message-text');
+        
+        // 使用 TextDecoder 来解码流
+        const decoder = new TextDecoder();
+        const reader = response.body.getReader();
+        let buffer = ''; // 用于存储未完成的数据
+        let fullResponse = '';
+        
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            
+            // 解码新的数据块并添加到缓冲区
+            buffer += decoder.decode(value, {stream: true});
+            
+            // 按行分割并处理每一行
+            const lines = buffer.split('\n');
+            // 保留最后一行（可能不完整）
+            buffer = lines.pop() || '';
+            
+            for (const line of lines) {
+                if (line.trim() === '') continue;
+                
+                try {
+                    // 移除 'data:' 前缀
+                    const jsonStr = line.replace(/^data:/, '').trim();
+                    if (!jsonStr) continue;
+                    
+                    const jsonData = JSON.parse(jsonStr);
+                    if (jsonData.choices && jsonData.choices[0].delta.content) {
+                        const content = jsonData.choices[0].delta.content;
+                        fullResponse += content;
+                        
+                        // 实时更新UI
+                        contentDiv.innerHTML = marked.parse(fullResponse);
+                        
+                        // 如果有代码块，应用语法高亮
+                        const codeBlocks = contentDiv.querySelectorAll('pre code');
+                        if (codeBlocks.length > 0) {
+                            codeBlocks.forEach(block => {
+                                hljs.highlightElement(block);
+                                addCopyButtonToCodeBlock(block);
+                            });
+                        }
+                        
+                        // 滚动到底部
+                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    }
+                } catch (e) {
+                    console.warn('解析数据块时出错:', e, line);
+                }
+            }
+        }
+        
+        // 处理缓冲区中剩余的数据
+        if (buffer.trim()) {
+            try {
+                const jsonStr = buffer.replace(/^data:/, '').trim();
+                if (jsonStr) {
+                    const jsonData = JSON.parse(jsonStr);
+                    if (jsonData.choices && jsonData.choices[0].delta.content) {
+                        const content = jsonData.choices[0].delta.content;
+                        fullResponse += content;
+                        contentDiv.innerHTML = marked.parse(fullResponse);
+                        
+                        // 处理最后一次的代码高亮
+                        const codeBlocks = contentDiv.querySelectorAll('pre code');
+                        if (codeBlocks.length > 0) {
+                            codeBlocks.forEach(block => {
+                                hljs.highlightElement(block);
+                                addCopyButtonToCodeBlock(block);
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('处理最后的数据块时出错:', e);
+            }
+        }
+
+        // 在获取完整响应后，将助理的回复添加到会话参数中
+        sessionParams.push({
+            role: 'assistant',
+            content: fullResponse
+        });
+
+        return fullResponse;
+    } catch (error) {
+        console.error('API调用错误:', error);
+        // 创建错误消息
+        const messageDiv = createMessageElement('assistant');
+        const contentDiv = messageDiv.querySelector('.message-text');
+        contentDiv.textContent = '抱歉，发生了错误，请稍后重试。';
+        messagesDiv.appendChild(messageDiv);
+        return '抱歉，发生了错误，请稍后重试。';
+    }
+}
 
 console.log('Chat webview loaded'); // 这会帮助你在开发者工具中找到你的代码 
