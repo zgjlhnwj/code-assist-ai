@@ -161,56 +161,81 @@ function handlePaste(event) {
             const blob = item.getAsFile();
             const reader = new FileReader();
             reader.onload = function(e) {
-                addImagePreview(e.target.result);
+                addImagePreview(e.target.result);  // 直接传递 base64 字符串
             };
             reader.readAsDataURL(blob);
         }
     }
 }
 
-function addImagePreview(imageData) {
-    const previewContainer = document.getElementById('previewContainer');
+// 图片预览相关函数
+function openModal(imgSrc) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    modal.classList.add('show');
+    modalImg.src = imgSrc;
+}
+
+function closeModal() {
+    const modal = document.getElementById('imageModal');
+    modal.classList.remove('show');
+}
+
+// 修改添加预览图片函数以处理 File 对象和 base64 字符串
+function addImagePreview(input) {
+    if (input instanceof File) {
+        // 如果输入是 File 对象
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            createImagePreview(e.target.result);
+        };
+        reader.readAsDataURL(input);
+    } else if (typeof input === 'string') {
+        // 如果输入是 base64 字符串
+        createImagePreview(input);
+    }
+}
+
+// 新增函数用于创建图片预览
+function createImagePreview(imgSrc) {
+    const img = document.createElement('img');
+    img.src = imgSrc;
+    img.onclick = () => openModal(imgSrc);
     
     // 将图片数据添加到数组中
-    imageDataArray.push(imageData);
+    imageDataArray.push(imgSrc);
     
     const previewWrapper = document.createElement('div');
     previewWrapper.className = 'image-preview';
     
-    const img = document.createElement('img');
-    img.src = imageData;
-    
     const removeButton = document.createElement('button');
     removeButton.className = 'remove-image';
     removeButton.innerHTML = '×';
-    removeButton.onclick = function() {
-        // 从数组中移除对应的图片数据
-        const index = imageDataArray.indexOf(imageData);
+    removeButton.onclick = function(e) {
+        e.stopPropagation(); // 防止触发图片的点击事件
+        // 从数组中移除图片数据
+        const index = imageDataArray.indexOf(imgSrc);
         if (index > -1) {
             imageDataArray.splice(index, 1);
         }
-        previewContainer.removeChild(previewWrapper);
+        previewWrapper.remove();
     };
     
     previewWrapper.appendChild(img);
     previewWrapper.appendChild(removeButton);
-    previewContainer.appendChild(previewWrapper);
+    document.getElementById('previewContainer').appendChild(previewWrapper);
 }
 
 function handleImageUpload() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.multiple = true; // 允许选择多个文件
+    input.multiple = true;
     
     input.onchange = function(e) {
         const files = e.target.files;
         for (const file of files) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                addImagePreview(e.target.result);
-            };
-            reader.readAsDataURL(file);
+            addImagePreview(file);  // 传递 File 对象
         }
     };
     
