@@ -96,44 +96,38 @@ function hideLoading() {
     loadingElement.classList.remove('active');
 }
 
-function addMessage(text, isAI = false, image = null) {
+function addMessage(text, isAI = false, images = null) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ' + (isAI ? 'ai-message' : 'user-message');
     
-    if (image) {
-        const imgContainer = document.createElement('div');
-        imgContainer.className = 'image-container';
+    // 如果有图片，先添加图片
+    if (images) {
+        const imagesContainer = document.createElement('div');
+        imagesContainer.className = 'images-container';
         
-        const img = document.createElement('img');
-        img.src = image;
-        img.className = 'thumbnail';
-        img.onclick = (e) => {
-            if (img.classList.contains('expanded')) {
-                img.classList.remove('expanded');
-            } else {
-                img.classList.add('expanded');
-            }
-        };
-        imgContainer.appendChild(img);
-        messageDiv.appendChild(imgContainer);
+        // 处理单张图片或多张图片
+        const imageArray = Array.isArray(images) ? images : [images];
         
-        if (!isAI) {
-            const generateBtn = document.createElement('button');
-            generateBtn.className = 'generate-code-btn';
-            generateBtn.textContent = '生成代码';
-            generateBtn.style.display = 'block';
-            generateBtn.onclick = () => {
-                vscode.postMessage({
-                    command: 'generateCode',
-                    image: image
-                });
-            };
-            messageDiv.appendChild(generateBtn);
-        }
+        imageArray.forEach(imgSrc => {
+            const imgWrapper = document.createElement('div');
+            imgWrapper.className = 'image-wrapper';
+            
+            const img = document.createElement('img');
+            img.src = imgSrc;
+            img.className = 'thumbnail';
+            img.onclick = () => openModal(imgSrc);
+            
+            imgWrapper.appendChild(img);
+            imagesContainer.appendChild(imgWrapper);
+        });
+        
+        messageDiv.appendChild(imagesContainer);
     }
     
+    // 如果有文本，添加文本
     if (text) {
         const textDiv = document.createElement('div');
+        textDiv.className = 'message-text';
         if (isAI) {
             marked.setOptions({
                 highlight: function(code, lang) {
@@ -244,30 +238,29 @@ function handleImageUpload() {
 
 function sendMessage() {
     const text = messageInput.value.trim();
+    const images = imageDataArray;
 
-    console.log('发送消息:', {
-        text,
-        imageDataArray,
-        selectedContextFiles
-        
-    });
-    
+    // 如果既没有文本也没有图片，则不发送
+    if (!text && images.length === 0) {
+        return;
+    }
+
+    // 添加用户消息到聊天界面
+    addMessage(text, false, images);
+
+    // 清空输入框和图片预览
+    messageInput.value = '';
+    const previewContainer = document.getElementById('previewContainer');
+    previewContainer.innerHTML = '';
+    imageDataArray = [];
+
+    // 发送消息到 VSCode
     if (isInVSCode()) {
-        // 使用 console.log 输出调试信息
-        console.log('发送消息:', {
-            text,
-            imageDataArray,
-            selectedContextFiles
-        });
-        
         vscode.postMessage({
-            command: 'console',
-            type: 'log',
-            data: {
-                text: text,
-                imageDataArray: imageDataArray,
-                selectedContextFiles: selectedContextFiles
-            }
+            command: 'sendMessage',
+            text: text,
+            images: images,
+            selectedFiles: selectedContextFiles
         });
     }
 }
